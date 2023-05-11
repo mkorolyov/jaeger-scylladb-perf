@@ -22,8 +22,8 @@ resource "aws_ecs_task_definition" "scylladb_task" {
   family                   = "scylladb"
   network_mode             = "bridge"
   requires_compatibilities = ["EC2"]
-  execution_role_arn       = aws_iam_role.ecs_task_role.arn
   task_role_arn            = aws_iam_role.ecs_task_role.arn
+  execution_role_arn       = aws_iam_role.ecs_task_role.arn
 
   placement_constraints {
     type       = "memberOf"
