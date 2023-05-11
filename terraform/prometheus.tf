@@ -9,25 +9,49 @@ resource "aws_security_group" "prometheus_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  ingress {
+    from_port   = 9100
+    to_port     = 9100
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
   vpc_id = aws_vpc.this.id
 }
 
 resource "aws_ecs_cluster" "this" {
-  name = local.ecs_cluster_name
+  name = "scylladb-ecs-cluster"
 }
 
 resource "aws_launch_configuration" "prometheus_lc" {
   associate_public_ip_address = true
-  name          = "ecs_launch_configuration"
-  image_id      = local.ami_id
-  instance_type = "t2.micro"
-  key_name      = local.key_pair
+  image_id                    = local.ami_id
+  instance_type               = "t2.micro"
+  key_name                    = local.key_pair
+  iam_instance_profile        = aws_iam_instance_profile.instance_profile-infra.name
 
   security_groups = [aws_security_group.prometheus_sg.id, aws_security_group.ssh.id]
 
   user_data = <<-EOF
                 #!/bin/bash
-                echo ECS_CLUSTER=${aws_ecs_cluster.this.name} >> /etc/ecs/ecs.config
+                sudo echo "ECS_DISABLE_METRICS=true
+                ECS_UPDATES_ENABLED=true
+                ECS_ENGINE_TASK_CLEANUP_WAIT_DURATION=15m
+                ECS_IMAGE_CLEANUP_INTERVAL=10m
+                ECS_CONTAINER_STOP_TIMEOUT=60s
+                ECS_RESERVED_MEMORY=512
+                ECS_ENABLE_TASK_IAM_ROLE=true
+                ECS_ENABLE_TASK_IAM_ROLE_NETWORK_HOST=true
+                ECS_NUM_IMAGES_DELETE_PER_CYCLE=50
+                ECS_CLUSTER=scylladb-ecs-cluster
+                " >> /etc/ecs/ecs.config
                 EOF
 
   lifecycle {
@@ -35,8 +59,13 @@ resource "aws_launch_configuration" "prometheus_lc" {
   }
 }
 
+#resource "aws_launch_template" "jaeger" {
+#  monitoring {
+#    enabled = true
+#  }
+#}
+
 resource "aws_autoscaling_group" "prometheus_asg" {
-  name                 = "ecs_autoscaling_group"
   launch_configuration = aws_launch_configuration.prometheus_lc.name
   desired_capacity     = 1
   min_size             = 1
@@ -44,59 +73,100 @@ resource "aws_autoscaling_group" "prometheus_asg" {
 
   vpc_zone_identifier = [aws_subnet.this.id]
 
+  #  tags = [
+  #    {
+  #      key   = "prometheus_node"
+  #      value = "true"
+  #      propagate_at_launch = true
+  #    }
+  #  ]
+
+  tag {
+    key                 = "prometheus_node"
+    value               = "true"
+    propagate_at_launch = true
+  }
+
   depends_on = [
     aws_launch_configuration.prometheus_lc,
   ]
 }
+
+data "aws_ecr_authorization_token" "token" {}
+
+resource "aws_ecr_repository" "prometheus" {
+  name                 = "prometheus"
+  image_tag_mutability = "MUTABLE"
+  force_delete         = true
+  lifecycle {
+    prevent_destroy = false
+  }
+
+  image_scanning_configuration {
+    scan_on_push = true
+  }
+
+  provisioner "local-exec" {
+    command = <<EOF
+      docker login ${data.aws_ecr_authorization_token.token.proxy_endpoint} -u AWS -p ${data.aws_ecr_authorization_token.token.password}
+      docker buildx build --platform linux/amd64 -t prometheus ../prometheus
+      docker tag prometheus:latest ${local.account_id}.dkr.ecr.${local.region}.amazonaws.com/prometheus:latest
+      docker push ${local.account_id}.dkr.ecr.${local.region}.amazonaws.com/prometheus:latest
+    EOF
+  }
+}
+
+#resource "aws_ecr_image" "prometheus" {
+#  repository_name = aws_ecr_repository.this.name
+#  image_tag       = "latest"
+#}
 
 resource "aws_ecs_task_definition" "prometheus_task" {
   family                   = "prometheus_task"
   requires_compatibilities = ["EC2"]
   network_mode             = "bridge"
   cpu                      = "384"
-  memory                   = "768"
+  memory                   = "384"
+
+  task_role_arn      = aws_iam_role.ecs_task_role.arn
+  execution_role_arn = aws_iam_role.ecs_task_role.arn
 
   container_definitions = jsonencode([
     {
       name      = "prometheus"
-      image     = "prom/prometheus"
+      image     = "${local.account_id}.dkr.ecr.${local.region}.amazonaws.com/prometheus:latest"
       cpu       = 256
-      memory    = 512
+      memory    = 256
       essential = true
-      command = [
+      command   = [
+        "--log.level=debug",
         "--config.file=/etc/prometheus/prometheus.yml",
         "--storage.tsdb.path=/prometheus",
-        "--storage.tsdb.retention.time=15d",
-      ],
-      mountPoints = [
-        {
-          containerPath = "/etc/prometheus/prometheus.yml"
-          sourceVolume  = "prometheus-config"
-          readOnly      = true
-        }
-      ],
+        "--web.console.libraries=/usr/share/prometheus/console_libraries",
+        "--web.console.templates=/usr/share/prometheus/consoles"
+      ]
       portMappings = [
         {
           containerPort = 9090
           hostPort      = 9090
           protocol      = "tcp"
         }
-      ],
-      logConfiguration = {
-        "logDriver" : "awslogs",
-        "options" : {
-          "awslogs-group" : "/ecs/prometheus",
-          "awslogs-region" : local.region,
-          "awslogs-stream-prefix" : "prometheus"
-        }
-      }
+      ]
+      #      logConfiguration = {
+      #        "logDriver" : "awslogs",
+      #        "options" : {
+      #          "awslogs-group" : "/ecs/prometheus",
+      #          "awslogs-region" : local.region,
+      #          "awslogs-stream-prefix" : "prometheus"
+      #        }
+      #      }
     },
     {
-      name      = "node-exporter"
-      image     = local.node_exporter_image
-      cpu       = 128
-      memory    = 256
-      essential = true
+      name         = "node-exporter"
+      image        = local.node_exporter_image
+      cpu          = 128
+      memory       = 128
+      essential    = true
       portMappings = [
         {
           containerPort = 9100
@@ -123,11 +193,6 @@ resource "aws_ecs_task_definition" "prometheus_task" {
       ]
     }
   ])
-
-  volume {
-    name        = "prometheus-config"
-    host_path = "../prometheus.yml"
-  }
 
   volume {
     name      = "proc"
@@ -162,6 +227,23 @@ resource "aws_ecs_service" "prometheus_service" {
   depends_on = [aws_lb_listener.prometheus_listener]
 }
 
+resource "aws_cloudwatch_log_group" "prometheus_log_group" {
+  name = "/ecs/prometheus"
+  #  role_arn = aws_iam_role.prometheus-logs.arn
+}
+
+resource "aws_cloudwatch_log_metric_filter" "prometheus_log_group_subscription" {
+  name           = "prometheus-log-group-subscription"
+  pattern        = ""
+  log_group_name = aws_cloudwatch_log_group.prometheus_log_group.name
+
+  metric_transformation {
+    name      = "EventCount"
+    namespace = "JaegerScyllaDB"
+    value     = "1"
+  }
+}
+
 resource "aws_lb" "prometheus_lb" {
   name               = "prometheus-lb"
   internal           = false
@@ -175,14 +257,13 @@ resource "aws_internet_gateway" "prometheus_igw" {
 }
 
 resource "aws_lb_target_group" "prometheus_tg" {
-  name     = "prometheus-targetgroup"
   port     = 9090
   protocol = "HTTP"
   vpc_id   = aws_vpc.this.id
 
   health_check {
     interval            = 30
-    path                = "/-/healthy"
+    path                = "/metrics"
     timeout             = 5
     healthy_threshold   = 2
     unhealthy_threshold = 2
