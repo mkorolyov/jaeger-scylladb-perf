@@ -31,6 +31,7 @@ resource "aws_ecs_cluster" "this" {
 }
 
 resource "aws_launch_configuration" "prometheus_lc" {
+  name                        = "prometheus"
   associate_public_ip_address = true
   image_id                    = local.ami_id
   instance_type               = "t2.micro"
@@ -46,24 +47,18 @@ resource "aws_launch_configuration" "prometheus_lc" {
                 ECS_ENGINE_TASK_CLEANUP_WAIT_DURATION=15m
                 ECS_IMAGE_CLEANUP_INTERVAL=10m
                 ECS_CONTAINER_STOP_TIMEOUT=60s
-                ECS_RESERVED_MEMORY=512
+                ECS_RESERVED_MEMORY=128
                 ECS_ENABLE_TASK_IAM_ROLE=true
                 ECS_ENABLE_TASK_IAM_ROLE_NETWORK_HOST=true
                 ECS_NUM_IMAGES_DELETE_PER_CYCLE=50
-                ECS_CLUSTER=scylladb-ecs-cluster
+                ECS_CLUSTER=${local.ecs_cluster_name}
                 " >> /etc/ecs/ecs.config
                 EOF
 
-  lifecycle {
-    create_before_destroy = true
-  }
-}
-
-#resource "aws_launch_template" "jaeger" {
-#  monitoring {
-#    enabled = true
+#  lifecycle {
+#    create_before_destroy = false
 #  }
-#}
+}
 
 resource "aws_autoscaling_group" "prometheus_asg" {
   launch_configuration = aws_launch_configuration.prometheus_lc.name
@@ -81,11 +76,11 @@ resource "aws_autoscaling_group" "prometheus_asg" {
   #    }
   #  ]
 
-  tag {
-    key                 = "prometheus_node"
-    value               = "true"
-    propagate_at_launch = true
-  }
+#  tag {
+#    key                 = "prometheus_node"
+#    value               = "true"
+#    propagate_at_launch = true
+#  }
 
   depends_on = [
     aws_launch_configuration.prometheus_lc,
@@ -115,11 +110,6 @@ resource "aws_ecr_repository" "prometheus" {
     EOF
   }
 }
-
-#resource "aws_ecr_image" "prometheus" {
-#  repository_name = aws_ecr_repository.this.name
-#  image_tag       = "latest"
-#}
 
 resource "aws_ecs_task_definition" "prometheus_task" {
   family                   = "prometheus_task"
@@ -227,22 +217,22 @@ resource "aws_ecs_service" "prometheus_service" {
   depends_on = [aws_lb_listener.prometheus_listener]
 }
 
-resource "aws_cloudwatch_log_group" "prometheus_log_group" {
-  name = "/ecs/prometheus"
-  #  role_arn = aws_iam_role.prometheus-logs.arn
-}
+#resource "aws_cloudwatch_log_group" "prometheus_log_group" {
+#  name = "/ecs/prometheus"
+#  #  role_arn = aws_iam_role.prometheus-logs.arn
+#}
 
-resource "aws_cloudwatch_log_metric_filter" "prometheus_log_group_subscription" {
-  name           = "prometheus-log-group-subscription"
-  pattern        = ""
-  log_group_name = aws_cloudwatch_log_group.prometheus_log_group.name
-
-  metric_transformation {
-    name      = "EventCount"
-    namespace = "JaegerScyllaDB"
-    value     = "1"
-  }
-}
+#resource "aws_cloudwatch_log_metric_filter" "prometheus_log_group_subscription" {
+#  name           = "prometheus-log-group-subscription"
+#  pattern        = ""
+#  log_group_name = aws_cloudwatch_log_group.prometheus_log_group.name
+#
+#  metric_transformation {
+#    name      = "EventCount"
+#    namespace = "JaegerScyllaDB"
+#    value     = "1"
+#  }
+#}
 
 resource "aws_lb" "prometheus_lb" {
   name               = "prometheus-lb"
@@ -250,10 +240,6 @@ resource "aws_lb" "prometheus_lb" {
   load_balancer_type = "application"
   security_groups    = [aws_security_group.prometheus_sg.id]
   subnets            = [aws_subnet.this.id, aws_subnet.this2.id]
-}
-
-resource "aws_internet_gateway" "prometheus_igw" {
-  vpc_id = aws_vpc.this.id
 }
 
 resource "aws_lb_target_group" "prometheus_tg" {
