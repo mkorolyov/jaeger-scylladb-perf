@@ -77,7 +77,7 @@ resource "aws_iam_role_policy" "instance_policy" {
           "logs:*",
           "cloudwatch:*",
           "ec2:*",
-          "ecr:*",
+          "ecr:*"
         ],
         "Effect": "Allow",
         "Resource": "*"

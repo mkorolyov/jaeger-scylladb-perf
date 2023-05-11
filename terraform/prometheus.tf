@@ -27,7 +27,7 @@ resource "aws_security_group" "prometheus_sg" {
 }
 
 resource "aws_ecs_cluster" "this" {
-  name = "scylladb-ecs-cluster"
+  name = local.ecs_cluster_name
 }
 
 resource "aws_launch_configuration" "prometheus_lc" {
@@ -208,13 +208,13 @@ resource "aws_ecs_service" "prometheus_service" {
 
   launch_type = "EC2"
 
-  load_balancer {
-    target_group_arn = aws_lb_target_group.prometheus_tg.arn
-    container_name   = "prometheus"
-    container_port   = 9090
-  }
+#  load_balancer {
+#    target_group_arn = aws_lb_target_group.prometheus_tg.arn
+#    container_name   = "prometheus"
+#    container_port   = 9090
+#  }
 
-  depends_on = [aws_lb_listener.prometheus_listener]
+#  depends_on = [aws_lb_listener.prometheus_listener]
 }
 
 #resource "aws_cloudwatch_log_group" "prometheus_log_group" {
@@ -234,42 +234,42 @@ resource "aws_ecs_service" "prometheus_service" {
 #  }
 #}
 
-resource "aws_lb" "prometheus_lb" {
-  name               = "prometheus-lb"
-  internal           = false
-  load_balancer_type = "application"
-  security_groups    = [aws_security_group.prometheus_sg.id]
-  subnets            = [aws_subnet.this.id, aws_subnet.this2.id]
-}
+#resource "aws_lb" "prometheus_lb" {
+#  name               = "prometheus-lb"
+#  internal           = false
+#  load_balancer_type = "application"
+#  security_groups    = [aws_security_group.prometheus_sg.id]
+#  subnets            = [aws_subnet.this.id, aws_subnet.this2.id]
+#}
 
-resource "aws_lb_target_group" "prometheus_tg" {
-  port     = 9090
-  protocol = "HTTP"
-  vpc_id   = aws_vpc.this.id
+#resource "aws_lb_target_group" "prometheus_tg" {
+#  port     = 9090
+#  protocol = "HTTP"
+#  vpc_id   = aws_vpc.this.id
+#
+#  health_check {
+#    interval            = 30
+#    path                = "/metrics"
+#    timeout             = 5
+#    healthy_threshold   = 2
+#    unhealthy_threshold = 2
+#    port                = "traffic-port"
+#    protocol            = "HTTP"
+#  }
+#}
 
-  health_check {
-    interval            = 30
-    path                = "/metrics"
-    timeout             = 5
-    healthy_threshold   = 2
-    unhealthy_threshold = 2
-    port                = "traffic-port"
-    protocol            = "HTTP"
-  }
-}
-
-resource "aws_lb_listener" "prometheus_listener" {
-  load_balancer_arn = aws_lb.prometheus_lb.arn
-  port              = 9090
-  protocol          = "HTTP"
-
-  default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.prometheus_tg.arn
-  }
-}
-
-output "prometheus_url" {
-  description = "Prometheus Load Balancer URL"
-  value       = aws_lb.prometheus_lb.dns_name
-}
+#resource "aws_lb_listener" "prometheus_listener" {
+#  load_balancer_arn = aws_lb.prometheus_lb.arn
+#  port              = 9090
+#  protocol          = "HTTP"
+#
+#  default_action {
+#    type             = "forward"
+#    target_group_arn = aws_lb_target_group.prometheus_tg.arn
+#  }
+#}
+#
+#output "prometheus_url" {
+#  description = "Prometheus Load Balancer URL"
+#  value       = aws_lb.prometheus_lb.dns_name
+#}

@@ -9,10 +9,6 @@ scrape_configs:
       - port: 9100
         region: us-east-1
         profile: instance_profile-infra
-#        filters:
-#          - name: tag:prometheus_node
-#            values:
-#              - "true"
     relabel_configs:
       - source_labels: [__meta_ec2_tag_monitoring_status]
         regex: .*monitored_node.*

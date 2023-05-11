@@ -23,12 +23,13 @@ resource "aws_instance" "db_host" {
     ECS_ENABLE_TASK_IAM_ROLE_NETWORK_HOST=true
     ECS_NUM_IMAGES_DELETE_PER_CYCLE=50
     ECS_CLUSTER=${local.ecs_cluster_name}
+    ECS_INSTANCE_ATTRIBUTES={\"deployment-host\":\"db-host\"}
     " >> /etc/ecs/ecs.config
     EOF
 }
 
 resource "aws_ecs_task_definition" "db_node_exporter_task" {
-  family                   = "db_host"
+  family                   = "node_exporter"
   network_mode             = "bridge"
   execution_role_arn       = aws_iam_role.ecs_task_role.arn
   task_role_arn            = aws_iam_role.ecs_task_role.arn
@@ -38,7 +39,7 @@ resource "aws_ecs_task_definition" "db_node_exporter_task" {
 
   placement_constraints {
     type       = "memberOf"
-    expression = "attribute:ecs.instance-id == ${aws_instance.db_host.id}"
+    expression = "attribute:deployment-host == db-host"
   }
 
   container_definitions = jsonencode([

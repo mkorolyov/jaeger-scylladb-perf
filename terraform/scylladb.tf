@@ -27,66 +27,66 @@ resource "aws_ecs_task_definition" "scylladb_task" {
 
   placement_constraints {
     type       = "memberOf"
-    expression = "attribute:ecs.instance-id == ${aws_instance.db_host.id}"
+    expression = "attribute:deployment-host == db-host"
   }
 
   container_definitions = jsonencode([
     {
-      name = "scylladb-1"
-      image = local.scylladb_image
-      cpu = 512
-      memory = 1024
-      essential = true
+      name         = "scylladb-1"
+      image        = local.scylladb_image
+      cpu          = 512
+      memory       = 1024
+      essential    = true
       portMappings = [
         {
           containerPort = 9042
-          hostPort = 9042
-          protocol = "tcp"
+          hostPort      = 9042
+          protocol      = "tcp"
         }
       ],
       environment = [
         {
-          name = "SCYLLA_SEEDS"
+          name  = "SCYLLA_SEEDS"
           value = "127.0.0.1"
         }
       ]
     },
     {
-      name = "scylladb-2"
-      image = local.scylladb_image
-      cpu = 512
-      memory = 1024
-      essential = true
+      name         = "scylladb-2"
+      image        = local.scylladb_image
+      cpu          = 512
+      memory       = 1024
+      essential    = true
       portMappings = [
         {
           containerPort = 9043
-          hostPort = 9043
-          protocol = "tcp"
+          hostPort      = 9043
+          protocol      = "tcp"
         }
       ],
       environment = [
         {
-          name = "SCYLLA_SEEDS"
+          name  = "SCYLLA_SEEDS"
           value = "127.0.0.1"
         }
       ]
     },
     {
-      name = "scylladb-3"
-      image = local.scylladb_image
-      cpu = 512
-      memory = 1024
-      essential = true
+      name         = "scylladb-3"
+      image        = local.scylladb_image
+      cpu          = 512
+      memory       = 1024
+      essential    = true
       portMappings = [
         {
           containerPort = 9044
-          hostPort = 9044
-          protocol = "tcp"
+          hostPort      = 9044
+          protocol      = "tcp"
         }
       ],
       environment = [
         {
-          name = "SCYLLA_SEEDS"
+          name  = "SCYLLA_SEEDS"
           value = "127.0.0.1"
         }
       ]
