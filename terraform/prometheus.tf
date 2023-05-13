@@ -68,9 +68,13 @@ resource "aws_ecs_task_definition" "prometheus_task" {
   network_mode             = "bridge"
   cpu                      = "384"
   memory                   = "384"
-
   task_role_arn      = aws_iam_role.ecs_task_role.arn
   execution_role_arn = aws_iam_role.ecs_task_role.arn
+
+  placement_constraints {
+    type       = "memberOf"
+    expression = "attribute:deployment-host == prometheus"
+  }
 
   container_definitions = jsonencode([
     {

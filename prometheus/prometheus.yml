@@ -15,3 +15,17 @@ scrape_configs:
         action: keep
       - source_labels: [__meta_ec2_tag_Name]
         target_label: group
+
+  - job_name:  'static'
+    scrape_interval: 15s
+
+    static_configs:
+      - targets:
+#          jaeger server
+          - '3.93.35.135:14250'
+#          jaeger server host
+          - '3.93.35.135:9100'
+#          prometheus host
+          - '44.200.158.177:9100'
+#          db host
+          - '54.236.42.186:9100'

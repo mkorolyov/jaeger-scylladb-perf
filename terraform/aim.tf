@@ -2,10 +2,10 @@ resource "aws_iam_role" "ecs_task_role" {
   name = "ecs-task-role"
 
   assume_role_policy = jsonencode({
-    Version = "2012-10-17"
+    Version   = "2012-10-17"
     Statement = [
       {
-        Effect = "Allow"
+        Effect    = "Allow"
         Principal = {
           Service = "ecs-tasks.amazonaws.com"
         }
@@ -43,25 +43,42 @@ resource "aws_iam_role_policy" "instance_policy" {
   depends_on = [aws_iam_role.instance_role-infra]
   policy     = <<EOF
 {
-    "Version": "2012-10-17",
-    "Statement": [
-      {
-        "Action": [
-          "ecs:*",
-          "es:*",
-          "logs:*",
-          "cloudwatch:*",
-          "ec2:*",
-          "ecr:*"
-        ],
-        "Effect": "Allow",
-        "Resource": "*"
-        }
-    ]
-}
-EOF
+      "Version": "2012-10-17",
+      "Statement": [
+        {
+          "Action": [
+            "ecs:*",
+            "es:*",
+            "logs:*",
+            "cloudwatch:*",
+            "ec2:*",
+            "ecr:*"
+          ],
+          "Effect": "Allow",
+          "Resource": "*"
+          }
+      ]
+    }
+  EOF
 }
 
+resource "aws_iam_role_policy" "ecs_policy" {
+  name       = "ecs-policy-infra"
+  role       = aws_iam_role.ecs_task_role.id
+  depends_on = [aws_iam_role.ecs_task_role]
+  policy     = <<EOF
+{
+      "Version": "2012-10-17",
+      "Statement": [
+        {
+          "Action": "*",
+          "Effect": "Allow",
+          "Resource": "*"
+          }
+      ]
+    }
+  EOF
+}
 resource "aws_iam_role_policy_attachment" "ec2_ecr_access_policy" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
   role       = aws_iam_role.ecs_task_role.name
