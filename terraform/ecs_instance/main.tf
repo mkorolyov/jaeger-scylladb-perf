@@ -15,7 +15,7 @@ resource "aws_instance" "ecs_ec2_instance" {
   ami                         = local.ami_id # Amazon Linux 2 LTS
   instance_type               = var.instance_type
   key_name                    = local.key_pair
-  security_groups             = [var.security_group]
+  vpc_security_group_ids      = [var.security_group]
   subnet_id                   = var.subnet_id
   associate_public_ip_address = true
   iam_instance_profile        = var.aim_instance_profile
