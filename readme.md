@@ -1,8 +1,3 @@
-#### took time: 
-* 13min 19:00-19:13 for generation tf for prometheus
-* 15min 13:30-13:45 generate scylladb tf 
-
-
 #### todo in aws console
 * your_key_pair: Sign in to your AWS Management Console and navigate to the EC2 Dashboard. Under the "Network & Security" section in the left sidebar, click on "Key Pairs". If you don't have a key pair already, create a new one by clicking the "Create key pair" button. The name of the existing or newly created key pair is the value you need to use for your_key_pair.
 * your_ami_id: In the AWS Management Console, go to the EC2 Dashboard. Click on "Launch Instance" to view the list of available Amazon Machine Images (AMIs). Choose an appropriate Amazon Linux 2 AMI for your instance. You can find the AMI ID in the details section of the selected AMI. It should look like this: ami-0c55b159cbfafe1f0 (this is an example, the actual ID may be different). Use this AMI ID as the value for your_ami_id.
