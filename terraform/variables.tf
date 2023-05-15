@@ -2,13 +2,13 @@ provider "aws" {
   region = local.region
 }
 
-terraform {
-  required_providers {
-    docker = {
-      source = "kreuzwerker/docker"
-    }
-  }
-}
+#terraform {
+#  required_providers {
+#    docker = {
+#      source = "kreuzwerker/docker"
+#    }
+#  }
+#}
 
 locals {
   region           = "us-east-1"

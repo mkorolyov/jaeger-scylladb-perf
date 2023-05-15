@@ -4,8 +4,22 @@ resource "aws_security_group" "jaeger-server" {
   vpc_id      = aws_vpc.this.id
 
   ingress {
-    from_port   = 0
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port   = 16686
     to_port     = 16686
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port   = 14250
+    to_port     = 14250
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
@@ -21,7 +35,7 @@ resource "aws_security_group" "jaeger-server" {
 module "jaeger-server_host" {
   source               = "./ecs_instance"
   deployment_host      = "jaeger-server"
-  security_groups      = [aws_security_group.jaeger-server.id]
+  security_group      = aws_security_group.jaeger-server.id
   subnet_id            = aws_subnet.this.id
   vpc_id               = aws_vpc.this.id
   instance_type        = "t2.micro"
@@ -53,6 +67,11 @@ resource "aws_ecs_task_definition" "jaeger-server" {
         {
           containerPort = 16686
           hostPort      = 16686
+          protocol      = "tcp"
+        },
+        {
+          containerPort = 14250
+          hostPort      = 14250
           protocol      = "tcp"
         }
       ],

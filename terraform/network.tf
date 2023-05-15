@@ -29,25 +29,25 @@ resource "aws_ecs_cluster" "this" {
   name = local.ecs_cluster_name
 }
 
-resource "aws_security_group" "ssh" {
-  name_prefix = "ssh-"
-
-  ingress {
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  vpc_id = aws_vpc.this.id
-}
+#resource "aws_security_group" "ssh" {
+#  name = "ssh"
+#
+#  ingress {
+#    from_port   = 22
+#    to_port     = 22
+#    protocol    = "tcp"
+#    cidr_blocks = ["0.0.0.0/0"]
+#  }
+#
+#  egress {
+#    from_port   = 0
+#    to_port     = 0
+#    protocol    = "-1"
+#    cidr_blocks = ["0.0.0.0/0"]
+#  }
+#
+#  vpc_id = aws_vpc.this.id
+#}
 
 resource "aws_internet_gateway" "prometheus_igw" {
   vpc_id = aws_vpc.this.id

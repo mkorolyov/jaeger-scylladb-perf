@@ -6,7 +6,7 @@ variable "instance_type" {}
 variable "deployment_host" {}
 variable "vpc_id" {}
 variable "subnet_id" {}
-variable "security_groups" {}
+variable "security_group" {}
 variable "ecs_cluster_id" {}
 variable "aim_instance_profile" {}
 variable "ecs_task_role_arn" {}
@@ -15,7 +15,7 @@ resource "aws_instance" "ecs_ec2_instance" {
   ami                         = local.ami_id # Amazon Linux 2 LTS
   instance_type               = var.instance_type
   key_name                    = local.key_pair
-  security_groups             = concat([aws_security_group.ssh.id], var.security_groups)
+  security_groups             = [var.security_group]
   subnet_id                   = var.subnet_id
   associate_public_ip_address = true
   iam_instance_profile        = var.aim_instance_profile

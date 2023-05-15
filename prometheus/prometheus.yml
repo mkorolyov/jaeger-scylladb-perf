@@ -9,12 +9,12 @@ scrape_configs:
       - port: 9100
         region: us-east-1
         profile: instance_profile-infra
-    relabel_configs:
-      - source_labels: [__meta_ec2_tag_monitoring_status]
-        regex: .*monitored_node.*
-        action: keep
-      - source_labels: [__meta_ec2_tag_Name]
-        target_label: group
+#    relabel_configs:
+#      - source_labels: [__meta_ec2_tag_monitoring_status]
+#        regex: .*monitored_node.*
+#        action: keep
+#      - source_labels: [__meta_ec2_tag_Name]
+#        target_label: group
 
   - job_name:  'static'
     scrape_interval: 15s
@@ -22,10 +22,4 @@ scrape_configs:
     static_configs:
       - targets:
 #          jaeger server
-          - '3.93.35.135:14250'
-#          jaeger server host
-          - '3.93.35.135:9100'
-#          prometheus host
-          - '44.200.158.177:9100'
-#          db host
-          - '54.236.42.186:9100'
+          - '3.215.180.186:14250'

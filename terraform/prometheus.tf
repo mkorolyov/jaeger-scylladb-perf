@@ -3,6 +3,13 @@ resource "aws_security_group" "prometheus_sg" {
   description = "Allow inbound traffic for Prometheus"
 
   ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
     from_port   = 9090
     to_port     = 9090
     protocol    = "tcp"
@@ -27,18 +34,18 @@ resource "aws_security_group" "prometheus_sg" {
 }
 
 module "prometheus_host" {
-  source = "./ecs_instance"
-  deployment_host = "prometheus"
-  security_groups = [aws_security_group.prometheus_sg.id]
-  subnet_id = aws_subnet.this.id
-  vpc_id = aws_vpc.this.id
-  instance_type = "t2.micro"
-  ecs_cluster_id = aws_ecs_cluster.this.id
+  source               = "./ecs_instance"
+  deployment_host      = "prometheus"
+  security_group      = aws_security_group.prometheus_sg.id
+  subnet_id            = aws_subnet.this.id
+  vpc_id               = aws_vpc.this.id
+  instance_type        = "t2.micro"
+  ecs_cluster_id       = aws_ecs_cluster.this.id
   aim_instance_profile = aws_iam_instance_profile.instance_profile-infra.name
-  ecs_task_role_arn = aws_iam_role.ecs_task_role.arn
+  ecs_task_role_arn    = aws_iam_role.ecs_task_role.arn
 }
 
-data "aws_ecr_authorization_token" "token" {}
+#data "aws_ecr_authorization_token" "token" {}
 
 resource "aws_ecr_repository" "prometheus" {
   name                 = "prometheus"
@@ -52,14 +59,14 @@ resource "aws_ecr_repository" "prometheus" {
     scan_on_push = true
   }
 
-  provisioner "local-exec" {
-    command = <<EOF
-      docker login ${data.aws_ecr_authorization_token.token.proxy_endpoint} -u AWS -p ${data.aws_ecr_authorization_token.token.password}
-      docker buildx build --platform linux/amd64 -t prometheus ../prometheus
-      docker tag prometheus:latest ${local.account_id}.dkr.ecr.${local.region}.amazonaws.com/prometheus:latest
-      docker push ${local.account_id}.dkr.ecr.${local.region}.amazonaws.com/prometheus:latest
-    EOF
-  }
+  #  provisioner "local-exec" {
+  #    command = <<EOF
+  #      docker login ${data.aws_ecr_authorization_token.token.proxy_endpoint} -u AWS -p ${data.aws_ecr_authorization_token.token.password}
+  #      docker buildx build --platform linux/amd64 -t prometheus ../prometheus
+  #      docker tag prometheus:latest ${local.account_id}.dkr.ecr.${local.region}.amazonaws.com/prometheus:latest
+  #      docker push ${local.account_id}.dkr.ecr.${local.region}.amazonaws.com/prometheus:latest
+  #    EOF
+  #  }
 }
 
 resource "aws_ecs_task_definition" "prometheus_task" {
@@ -68,8 +75,8 @@ resource "aws_ecs_task_definition" "prometheus_task" {
   network_mode             = "bridge"
   cpu                      = "384"
   memory                   = "384"
-  task_role_arn      = aws_iam_role.ecs_task_role.arn
-  execution_role_arn = aws_iam_role.ecs_task_role.arn
+  task_role_arn            = aws_iam_role.ecs_task_role.arn
+  execution_role_arn       = aws_iam_role.ecs_task_role.arn
 
   placement_constraints {
     type       = "memberOf"
