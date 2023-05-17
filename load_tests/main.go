@@ -1,15 +1,19 @@
-package load_tests
+package main
 
 import (
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"strconv"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+
 	"load_test/workerpool"
 
 	"github.com/opentracing/opentracing-go"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/uber/jaeger-client-go"
 	jaegercfg "github.com/uber/jaeger-client-go/config"
 	"github.com/uber/jaeger-client-go/transport"
@@ -26,12 +30,30 @@ var (
 	spansCount  = mustParseStrToInt(spansCountStr, 10)
 	tagsCount   = mustParseStrToInt(tagsCountStr, 10)
 	durationS   = mustParseStrToInt(durationSStr, 60)
+
+	// Create a new counter metric
+	counter = prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "send_spans",
+		Help: "send traces to jaeger",
+	})
 )
 
 func main() {
+	prometheus.MustRegister(counter)
+
 	if jaegerCollectorHost == "" {
 		jaegerCollectorHost = "localhost"
 	}
+
+	http.Handle("/metrics", promhttp.Handler())
+	go func() {
+		// Start an HTTP server to expose the metrics
+		err := http.ListenAndServe(":9101", nil)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to start metric server: %s", err)
+			os.Exit(1)
+		}
+	}()
 
 	timer := time.NewTimer(time.Second * time.Duration(durationS))
 	pool := workerpool.New(workerpool.Config{
@@ -47,6 +69,8 @@ func main() {
 		case <-timer.C:
 			pool.Close()
 			_ = closer.Close()
+			// let prometheus scrape the metrics
+			time.Sleep(time.Second * 30)
 			return
 		default:
 		}
@@ -58,6 +82,7 @@ func main() {
 				childSpan := tracer.StartSpan("my-child-span", opentracing.ChildOf(span.Context()))
 				genTags(childSpan)
 				childSpan.Finish()
+				counter.Inc()
 			}
 			span.Finish()
 		})
