@@ -1,22 +1,19 @@
-# Use a Maven base image
-FROM maven:alpine as BUILD
+#Build stage
 
-# Set the working directory
-WORKDIR /tests
+FROM golang:1.20.3-alpine3.16 as BuildStage
 
-# Copy the source code repository to the working directory
-COPY jaeger-performance /tests
+WORKDIR /app
 
-# Run the Maven tests
-ENV TEST_CONFIG_FILE="test_config.yaml"
-RUN mvn package -Dmaven.test.skip=true
+COPY . .
 
-FROM openjdk:alpine
+RUN go build -v -o bin/binary main.go
 
-# Set the working directory
-WORKDIR /tests
+# Deploy stage
 
-COPY --from=BUILD /tests/target/performance-tests*-jar-with-dependencies.jar /tests/performance-tests.jar
+FROM alpine:3.16
 
-CMD ["java", "-jar", "performance-tests.jar"]
+COPY --from=BuildStage /app/bin/binary /app/binary
 
+EXPOSE 9101
+
+ENTRYPOINT "/app" "-addr" "${addr_env}"

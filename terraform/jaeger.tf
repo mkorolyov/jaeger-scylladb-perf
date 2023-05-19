@@ -11,6 +11,13 @@ resource "aws_security_group" "jaeger-server" {
   }
 
   ingress {
+    from_port   = 14269
+    to_port     = 14269
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
     from_port   = 16686
     to_port     = 16686
     protocol    = "tcp"
@@ -73,6 +80,11 @@ resource "aws_ecs_task_definition" "jaeger-server" {
           containerPort = 14250
           hostPort      = 14250
           protocol      = "tcp"
+        },
+        {
+          containerPort = 14269
+          hostPort      = 14269
+          protocol      = "tcp"
         }
       ],
       environment = [
@@ -87,7 +99,11 @@ resource "aws_ecs_task_definition" "jaeger-server" {
         {
           name  = "CASSANDRA_KEYSPACE"
           value = "jaeger_v1_datacenter1"
-        }
+        },
+        {
+          name = "JAEGER_REPORTER_TYPE"
+          value = "prometheus"
+        },
       ]
     },
   ])

@@ -41,7 +41,7 @@ resource "aws_instance" "ecs_ec2_instance" {
     EOF
 }
 
-resource "aws_ecs_task_definition" "this" {
+resource "aws_ecs_task_definition" "node_exporter" {
   family                   = "node_exporter"
   network_mode             = "bridge"
   execution_role_arn       = var.ecs_task_role_arn
@@ -68,6 +68,12 @@ resource "aws_ecs_task_definition" "this" {
           hostPort      = 9100
           protocol      = "tcp"
         }
+      ],
+      command = [
+#        "--path.procfs=/host/proc",
+#        "--path.sysfs=/host/sys",
+#        "--collector.filesystem.ignored-mount-points=^/(sys|proc|dev|host|etc)($$|/)"
+         "--collector.node_custom_tag.host_name='${var.deployment_host}'",
       ],
       mountPoints = [
         {
@@ -108,7 +114,7 @@ resource "aws_ecs_task_definition" "this" {
 resource "aws_ecs_service" "db_node_exporter" {
   name            = "${var.deployment_host}-node_exporter"
   cluster         = var.ecs_cluster_id
-  task_definition = aws_ecs_task_definition.this.arn
+  task_definition = aws_ecs_task_definition.node_exporter.arn
   desired_count   = 1
 
   launch_type = "EC2"

@@ -58,23 +58,12 @@ resource "aws_ecr_repository" "prometheus" {
   image_scanning_configuration {
     scan_on_push = true
   }
-
-  #  provisioner "local-exec" {
-  #    command = <<EOF
-  #      docker login ${data.aws_ecr_authorization_token.token.proxy_endpoint} -u AWS -p ${data.aws_ecr_authorization_token.token.password}
-  #      docker buildx build --platform linux/amd64 -t prometheus ../prometheus
-  #      docker tag prometheus:latest ${local.account_id}.dkr.ecr.${local.region}.amazonaws.com/prometheus:latest
-  #      docker push ${local.account_id}.dkr.ecr.${local.region}.amazonaws.com/prometheus:latest
-  #    EOF
-  #  }
 }
 
 resource "aws_ecs_task_definition" "prometheus_task" {
   family                   = "prometheus_task"
   requires_compatibilities = ["EC2"]
   network_mode             = "bridge"
-  cpu                      = "384"
-  memory                   = "384"
   task_role_arn            = aws_iam_role.ecs_task_role.arn
   execution_role_arn       = aws_iam_role.ecs_task_role.arn
 
