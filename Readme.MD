@@ -31,8 +31,8 @@ install terraform cli
 To deploy the infrastructure run:
 
 ```bash
-terraform init -childdir=terraform
-terraform apply -childdir=terraform
+terraform init -chdir=terraform
+terraform apply -chdir=terraform
 ```
 
 This will create all the required infrastructure on AWS except of prometheus server and load test docker image. We need to build them and push to the AWS by hands:
@@ -58,5 +58,5 @@ When images are pushed ecs agent on the nodes will pull them and run. Infra is r
 To cleanup all resources in AWS and destroy the infrastructure:
 
 ```bash
-terraform destroy -childdir=terraform
+terraform destroy -chdir=terraform
 ```
