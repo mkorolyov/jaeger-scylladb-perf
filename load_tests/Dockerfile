@@ -16,4 +16,4 @@ COPY --from=BuildStage /app/bin/binary /app/binary
 
 EXPOSE 9101
 
-ENTRYPOINT "/app" "-addr" "${addr_env}"
+ENTRYPOINT "/app/binary"

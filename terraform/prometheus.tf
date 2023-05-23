@@ -60,8 +60,8 @@ resource "aws_ecr_repository" "prometheus" {
   }
 }
 
-resource "aws_ecs_task_definition" "prometheus_task" {
-  family                   = "prometheus_task"
+resource "aws_ecs_task_definition" "prometheus" {
+  family                   = "prometheus"
   requires_compatibilities = ["EC2"]
   network_mode             = "bridge"
   task_role_arn            = aws_iam_role.ecs_task_role.arn
@@ -97,10 +97,10 @@ resource "aws_ecs_task_definition" "prometheus_task" {
   ])
 }
 
-resource "aws_ecs_service" "prometheus_service" {
-  name            = "prometheus_service"
+resource "aws_ecs_service" "prometheus" {
+  name            = "prometheus"
   cluster         = aws_ecs_cluster.this.id
-  task_definition = aws_ecs_task_definition.prometheus_task.arn
+  task_definition = aws_ecs_task_definition.prometheus.arn
   desired_count   = 1
 
   launch_type = "EC2"

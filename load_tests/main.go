@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"strconv"
@@ -14,17 +13,18 @@ import (
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/uber/jaeger-client-go"
-	jaegercfg "github.com/uber/jaeger-client-go/config"
-	"github.com/uber/jaeger-client-go/transport"
+	otbridge "go.opentelemetry.io/otel/bridge/opentracing"
+	"go.opentelemetry.io/otel/exporters/jaeger"
+	"go.opentelemetry.io/otel/sdk/resource"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
 )
 
 var (
-	concurrencyStr      = os.Getenv("CONCURRENCY")
-	spansCountStr       = os.Getenv("SPANS_COUNT")
-	tagsCountStr        = os.Getenv("TAGS_COUNT")
-	durationSStr        = os.Getenv("DURATION_S")
-	jaegerCollectorHost = os.Getenv("JAEGER_COLLECTOR_HOST")
+	concurrencyStr = os.Getenv("CONCURRENCY")
+	spansCountStr  = os.Getenv("SPANS_COUNT")
+	tagsCountStr   = os.Getenv("TAGS_COUNT")
+	durationSStr   = os.Getenv("DURATION_S")
 
 	concurrency = mustParseStrToInt(concurrencyStr, 10)
 	spansCount  = mustParseStrToInt(spansCountStr, 10)
@@ -40,10 +40,6 @@ var (
 
 func main() {
 	prometheus.MustRegister(counter)
-
-	if jaegerCollectorHost == "" {
-		jaegerCollectorHost = "localhost"
-	}
 
 	http.Handle("/metrics", promhttp.Handler())
 	go func() {
@@ -61,14 +57,13 @@ func main() {
 		TaskQueueLength: concurrency,
 	})
 
-	tracer, closer := buildJaegerTracer()
+	tracer := buildJaegerTracer()
 	opentracing.SetGlobalTracer(tracer)
 
 	for {
 		select {
 		case <-timer.C:
 			pool.Close()
-			_ = closer.Close()
 			// let prometheus scrape the metrics
 			time.Sleep(time.Second * 30)
 			return
@@ -89,34 +84,53 @@ func main() {
 	}
 }
 
-func buildJaegerTracer() (opentracing.Tracer, io.Closer) {
-	cfg := jaegercfg.Configuration{
-		ServiceName: "my-service",
-		Sampler: &jaegercfg.SamplerConfig{
-			Type:  jaeger.SamplerTypeConst,
-			Param: 1,
-		},
-		Reporter: &jaegercfg.ReporterConfig{
-			CollectorEndpoint: fmt.Sprintf("http://%s:14268/api/traces", jaegerCollectorHost),
-			LogSpans:          true,
-		},
-	}
-
-	sender := transport.NewHTTPTransport(
-		cfg.Reporter.CollectorEndpoint,
-		transport.HTTPBatchSize(1),
-	)
-
-	reporter := jaeger.NewRemoteReporter(sender)
-
-	tracer, closer, err := cfg.NewTracer(
-		jaegercfg.Reporter(reporter),
-	)
+func buildJaegerTracer() opentracing.Tracer {
+	exporter, err := jaeger.New(jaeger.WithCollectorEndpoint())
 	if err != nil {
-		panic(fmt.Sprintf("ERROR: cannot init Jaeger: %v\n", err))
+		panic(err)
 	}
-	return tracer, closer
+
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithBatcher(exporter),
+		sdktrace.WithResource(resource.NewWithAttributes(
+			semconv.SchemaURL,
+			semconv.ServiceNameKey.String("load_tests"),
+		)),
+	)
+
+	otTracer, _ := otbridge.NewTracerPair(tp.Tracer(""))
+	return otTracer
+
 }
+
+//func buildJaegerTracer() (opentracing.Tracer, io.Closer) {
+//	cfg := jaegercfg.Configuration{
+//		ServiceName: "my-service",
+//		Sampler: &jaegercfg.SamplerConfig{
+//			Type:  jaeger.SamplerTypeConst,
+//			Param: 1,
+//		},
+//		Reporter: &jaegercfg.ReporterConfig{
+//			CollectorEndpoint: fmt.Sprintf("http://%s:14269/api/traces", jaegerCollectorHost),
+//			LogSpans:          true,
+//		},
+//	}
+//
+//	sender := transport.NewHTTPTransport(
+//		cfg.Reporter.CollectorEndpoint,
+//		transport.HTTPBatchSize(1),
+//	)
+//
+//	reporter := jaeger.NewRemoteReporter(sender)
+//
+//	tracer, closer, err := cfg.NewTracer(
+//		jaegercfg.Reporter(reporter),
+//	)
+//	if err != nil {
+//		panic(fmt.Sprintf("ERROR: cannot init Jaeger: %v\n", err))
+//	}
+//	return tracer, closer
+//}
 
 func genTags(span opentracing.Span) {
 	for i := 0; i < tagsCount; i++ {

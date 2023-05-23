@@ -18,6 +18,13 @@ resource "aws_security_group" "scylladb_sg" {
   }
 
   ingress {
+    from_port   = 9100
+    to_port     = 9100
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
     from_port   = 19042
     to_port     = 19042
     protocol    = "tcp"

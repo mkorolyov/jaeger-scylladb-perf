@@ -69,12 +69,6 @@ resource "aws_ecs_task_definition" "node_exporter" {
           protocol      = "tcp"
         }
       ],
-      command = [
-#        "--path.procfs=/host/proc",
-#        "--path.sysfs=/host/sys",
-#        "--collector.filesystem.ignored-mount-points=^/(sys|proc|dev|host|etc)($$|/)"
-         "--collector.node_custom_tag.host_name='${var.deployment_host}'",
-      ],
       mountPoints = [
         {
           containerPath = "/host/proc"

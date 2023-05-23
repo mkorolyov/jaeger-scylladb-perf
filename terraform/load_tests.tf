@@ -70,6 +70,10 @@ resource "aws_ecs_task_definition" "load_tests" {
       cpu       = 32
       memory    = 32
       essential = true
+      command   = [
+        "sleep",
+        "infinity"
+      ]
     },
     {
       name        = "load_tests"
@@ -95,8 +99,8 @@ resource "aws_ecs_task_definition" "load_tests" {
           value = "60"
         },
         {
-          name  = "JAEGER_COLLECTOR_HOST"
-          value = "${module.jaeger-server_host.public_ip4}"
+          name  = "OTEL_EXPORTER_JAEGER_ENDPOINT"
+          value = "http://${module.jaeger-server_host.public_ip4}:14268/api/traces"
         }
       ]
       portMappings = [

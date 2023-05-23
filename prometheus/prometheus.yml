@@ -1,21 +1,29 @@
 global:
-  scrape_interval:     15s
+  scrape_interval: 15s
   evaluation_interval: 30s
 
 scrape_configs:
-  - job_name: 'ec2_discovery_node_exporter'
-    scrape_interval: 15s
+  - job_name: 'ec2_discovery'
+    relabel_configs:
+      - source_labels: [ __meta_ec2_tag_Name ]
+        target_label: job
     ec2_sd_configs:
       - port: 9100
         region: us-east-1
         profile: instance_profile-infra
 
-  - job_name:  'static'
-    scrape_interval: 15s
+      - port: 14269
+        region: us-east-1
+        profile: instance_profile-infra
+        filters:
+          - name: tag:Name
+            values:
+              - jaeger-server
 
-    static_configs:
-      - targets:
-          # jaeger server
-          - '10.0.1.33:14269'
-          # load tests
-          - '10.0.1.124:9101'
+      - port: 9101
+        region: us-east-1
+        profile: instance_profile-infra
+        filters:
+          - name: tag:Name
+            values:
+              - load_tests

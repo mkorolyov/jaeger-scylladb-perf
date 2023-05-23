@@ -9,8 +9,8 @@ docker_login:
 docker_update:
 	docker buildx build --platform linux/amd64 -t ${IMAGE_NAME} ./${IMAGE_NAME}
 	@ENDPOINT=${ACCOUNT}.dkr.ecr.${REGION}.amazonaws.com; \
-	docker tag prometheus:latest $${ENDPOINT}/${IMAGE_NAME}:latest && \
+	docker tag ${IMAGE_NAME}:latest $${ENDPOINT}/${IMAGE_NAME}:latest && \
 	docker push $${ENDPOINT}/${IMAGE_NAME}:latest
 
 ecs_update: docker_update
-	aws ecs update-service --cluster scylladb-ecs-cluster --service ${IMAGE_NAME}_service --task-definition ${IMAGE_NAME}_task
+	aws ecs update-service --cluster scylladb-ecs-cluster --service ${IMAGE_NAME} --force-new-deployment

@@ -11,7 +11,14 @@ resource "aws_security_group" "jaeger-server" {
   }
 
   ingress {
-    from_port   = 14269
+    from_port   = 9100
+    to_port     = 9100
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port   = 14268
     to_port     = 14269
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
@@ -42,7 +49,7 @@ resource "aws_security_group" "jaeger-server" {
 module "jaeger-server_host" {
   source               = "./ecs_instance"
   deployment_host      = "jaeger-server"
-  security_group      = aws_security_group.jaeger-server.id
+  security_group       = aws_security_group.jaeger-server.id
   subnet_id            = aws_subnet.this.id
   vpc_id               = aws_vpc.this.id
   instance_type        = "t2.micro"
@@ -82,6 +89,11 @@ resource "aws_ecs_task_definition" "jaeger-server" {
           protocol      = "tcp"
         },
         {
+          containerPort = 14268
+          hostPort      = 14268
+          protocol      = "tcp"
+        },
+        {
           containerPort = 14269
           hostPort      = 14269
           protocol      = "tcp"
@@ -101,7 +113,7 @@ resource "aws_ecs_task_definition" "jaeger-server" {
           value = "jaeger_v1_datacenter1"
         },
         {
-          name = "JAEGER_REPORTER_TYPE"
+          name  = "JAEGER_REPORTER_TYPE"
           value = "prometheus"
         },
       ]
