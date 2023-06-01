@@ -36,7 +36,7 @@ resource "aws_security_group" "prometheus_sg" {
 module "prometheus_host" {
   source               = "./ecs_instance"
   deployment_host      = "prometheus"
-  security_group      = aws_security_group.prometheus_sg.id
+  security_group       = aws_security_group.prometheus_sg.id
   subnet_id            = aws_subnet.this.id
   vpc_id               = aws_vpc.this.id
   instance_type        = "t2.micro"
@@ -44,8 +44,6 @@ module "prometheus_host" {
   aim_instance_profile = aws_iam_instance_profile.instance_profile-infra.name
   ecs_task_role_arn    = aws_iam_role.ecs_task_role.arn
 }
-
-#data "aws_ecr_authorization_token" "token" {}
 
 resource "aws_ecr_repository" "prometheus" {
   name                 = "prometheus"
@@ -98,10 +96,11 @@ resource "aws_ecs_task_definition" "prometheus" {
 }
 
 resource "aws_ecs_service" "prometheus" {
-  name            = "prometheus"
-  cluster         = aws_ecs_cluster.this.id
-  task_definition = aws_ecs_task_definition.prometheus.arn
-  desired_count   = 1
+  name                               = "prometheus"
+  cluster                            = aws_ecs_cluster.this.id
+  task_definition                    = aws_ecs_task_definition.prometheus.arn
+  desired_count                      = 1
+  deployment_minimum_healthy_percent = 0
 
   launch_type = "EC2"
 }

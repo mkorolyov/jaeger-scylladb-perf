@@ -42,7 +42,7 @@ resource "aws_instance" "ecs_ec2_instance" {
 }
 
 resource "aws_ecs_task_definition" "node_exporter" {
-  family                   = "node_exporter"
+  family                   = "${var.deployment_host}_node_exporter"
   network_mode             = "bridge"
   execution_role_arn       = var.ecs_task_role_arn
   task_role_arn            = var.ecs_task_role_arn

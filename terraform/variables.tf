@@ -15,5 +15,6 @@ locals {
   account_id       = "623708595330"
   ecs_cluster_name = "scylladb-ecs-cluster"
 
-  scylladb_image      = "scylladb/scylla"
+  scylladb_image  = "scylladb/scylla"
+  cassandra_image = "cassandra:latest"
 }

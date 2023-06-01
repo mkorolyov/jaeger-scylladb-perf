@@ -1,61 +1,40 @@
-resource "aws_security_group" "scylladb_sg" {
+resource "aws_security_group" "db_sg" {
   name        = "scylladb"
   description = "Allow all necessary ports for ScyllaDB"
   vpc_id      = aws_vpc.this.id
 
   ingress {
-    from_port   = 0
-    to_port     = 65535
+    from_port   = 22
+    to_port     = 22
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
   ingress {
-    from_port   = 0
-    to_port     = 65535
-    protocol    = "udp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    from_port   = 0
-    to_port     = 9042
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    from_port   = 0
-    to_port     = 9043
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    from_port   = 0
+    from_port   = 9042
     to_port     = 9044
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
   ingress {
-    from_port   = 0
-    to_port     = 9042
-    protocol    = "udp"
+    from_port   = 7000
+    to_port     = 7002
+    protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
   ingress {
-    from_port   = 0
-    to_port     = 9043
-    protocol    = "udp"
+    from_port   = 9100
+    to_port     = 9100
+    protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
   ingress {
-    from_port   = 0
-    to_port     = 9044
-    protocol    = "udp"
+    from_port   = 19042
+    to_port     = 19042
+    protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
@@ -67,95 +46,178 @@ resource "aws_security_group" "scylladb_sg" {
   }
 }
 
-resource "aws_ecs_task_definition" "scylladb_task" {
-  family                   = "scylladb"
+resource "aws_ecs_task_definition" "cassandra_task" {
+  family                   = "cassandra"
   network_mode             = "bridge"
   requires_compatibilities = ["EC2"]
-  execution_role_arn       = aws_iam_role.ecs_task_role.arn
   task_role_arn            = aws_iam_role.ecs_task_role.arn
+  execution_role_arn       = aws_iam_role.ecs_task_role.arn
 
   placement_constraints {
     type       = "memberOf"
-    expression = "attribute:ecs.instance-id == ${aws_instance.db_host.id}"
+    expression = "attribute:deployment-host == db-host"
   }
 
   container_definitions = jsonencode([
     {
-      name = "scylladb-1"
-      image = local.scylladb_image
-      cpu = 512
-      memory = 1024
-      essential = true
+      name        = "jaeger-cassandra-schema"
+      image       = "jaegertracing/jaeger-cassandra-schema:latest"
+      cpu         = 64
+      memory      = 64
+      essential   = false
+      environment = [
+        {
+          name  = "CASSANDRA_PROTOCOL_VERSION"
+          value = "4"
+        },
+        {
+          name  = "CASSANDRA_VERSION"
+          value = "4"
+        },
+        {
+          name  = "CQLSH_HOST"
+          value = "${module.db_host.public_ip4}"
+        },
+        {
+          name  = "DATACENTER"
+          value = "datacenter1"
+        },
+        {
+          name  = "CASSANDRA_KEYSPACE"
+          value = "jaeger_v1_datacenter1"
+        },
+      ]
+    },
+    {
+      name         = "cassandra-1"
+      image        = local.cassandra_image
+      cpu          = 512
+      memory       = 1536
+      essential    = true
       portMappings = [
         {
           containerPort = 9042
-          hostPort = 9042
-          protocol = "tcp"
+          hostPort      = 9042
+          protocol      = "tcp"
+        },
+        {
+          containerPort = 7000
+          hostPort      = 7000
+          protocol      = "tcp"
         }
       ],
       environment = [
+#        {
+#          name  = "CASSANDRA_SEEDS"
+#          value = "127.0.0.1"
+#        },
+#        {
+#          name = "CASSANDRA_LISTEN_ADDRESS"
+#            value = "cassandra1"
+#        },
         {
-          name = "SCYLLA_SEEDS"
-          value = "127.0.0.1"
-        }
+          name = "CASSANDRA_BROADCAST_ADDRESS"
+            value = "${module.db_host.public_ip4}"
+        },
+        {
+          name = "CASSANDRA_DC"
+            value = "datacenter1"
+        },
+        {
+          name = "CASSANDRA_CLUSTER_NAME"
+            value = "jaeger"
+        },
       ]
     },
     {
-      name = "scylladb-2"
-      image = local.scylladb_image
-      cpu = 512
-      memory = 1024
-      essential = true
+      name         = "cassandra-2"
+      image        = local.cassandra_image
+      cpu          = 512
+      memory       = 1536
+      essential    = true
       portMappings = [
         {
-          containerPort = 9043
-          hostPort = 9043
-          protocol = "tcp"
+          containerPort = 9042
+          hostPort      = 9043
+          protocol      = "tcp"
+        },
+        {
+          containerPort = 7000
+          hostPort      = 7001
+          protocol      = "tcp"
         }
       ],
       environment = [
         {
-          name = "SCYLLA_SEEDS"
-          value = "127.0.0.1"
-        }
-      ]
-    },
-    {
-      name = "scylladb-3"
-      image = local.scylladb_image
-      cpu = 512
-      memory = 1024
-      essential = true
-      portMappings = [
+          name  = "CASSANDRA_SEEDS"
+          value = "${module.db_host.public_ip4}"
+        },
+#        {
+#          name = "CASSANDRA_LISTEN_ADDRESS"
+#          value = "cassandra2"
+#        },
         {
-          containerPort = 9044
-          hostPort = 9044
-          protocol = "tcp"
-        }
-      ],
-      environment = [
+          name = "CASSANDRA_BROADCAST_ADDRESS"
+          value = "${module.db_host.public_ip4}"
+        },
         {
-          name = "SCYLLA_SEEDS"
-          value = "127.0.0.1"
-        }
+          name = "CASSANDRA_DC"
+          value = "datacenter2"
+        },
+        {
+          name = "CASSANDRA_CLUSTER_NAME"
+          value = "jaeger"
+        },
       ]
-    },
+    }
+#    {
+#      name         = "cassandra-3"
+#      image        = local.cassandra_image
+#      cpu          = 512
+#      memory       = 1024
+#      essential    = true
+#      portMappings = [
+#        {
+#          containerPort = 9042
+#          hostPort      = 9044
+#          protocol      = "tcp"
+#        },
+#        {
+#          containerPort = 7000
+#          hostPort      = 7002
+#          protocol      = "tcp"
+#        },
+#      ],
+#      environment = [
+#        {
+#          name  = "CASSANDRA_SEEDS"
+#          value = "${module.db_host.public_ip4}"
+#        },
+##        {
+##          name = "CASSANDRA_LISTEN_ADDRESS"
+##          value = "cassandra3"
+##        },
+#        {
+#          name = "CASSANDRA_BROADCAST_ADDRESS"
+#          value = "${module.db_host.public_ip4}"
+#        },
+#        {
+#          name = "CASSANDRA_DC"
+#          value = "datacenter1"
+#        },
+#        {
+#          name = "CASSANDRA_CLUSTER_NAME"
+#          value = "jaeger"
+#        },
+#      ]
+#    }
   ])
 }
 
-resource "aws_ecs_service" "scylladb" {
-  name            = "scylladb"
+resource "aws_ecs_service" "cassandra" {
+  name            = "cassandra"
   cluster         = aws_ecs_cluster.this.id
-  task_definition = aws_ecs_task_definition.scylladb_task.arn
+  task_definition = aws_ecs_task_definition.cassandra_task.arn
   desired_count   = 1
   launch_type     = "EC2"
-
-#  deployment_controller {
-#    type = "ECS"
-#  }
-
-#  network_configuration {
-#    subnets         = [aws_subnet.this.id]
-#    security_groups = [aws_security_group.scylladb_sg.id]
-#  }
 }

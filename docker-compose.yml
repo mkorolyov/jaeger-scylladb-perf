@@ -1,0 +1,42 @@
+version: '3'
+services:
+  cassandra1:
+    image: cassandra:latest
+    container_name: cassandra1
+    ports:
+      - 9042:9042
+    volumes:
+      - ./data1:/var/lib/cassandra
+    environment:
+      - MAX_HEAP_SIZE=1G
+      - HEAP_NEWSIZE=256M
+      - CASSANDRA_SEEDS=cassandra1,cassandra2,cassandra3
+      - CASSANDRA_LISTEN_ADDRESS=cassandra1
+      - CASSANDRA_BROADCAST_ADDRESS=cassandra1
+    restart: always
+
+  cassandra2:
+    image: cassandra:latest
+    container_name: cassandra2
+    volumes:
+      - ./data2:/var/lib/cassandra
+    environment:
+      - MAX_HEAP_SIZE=1G
+      - HEAP_NEWSIZE=256M
+      - CASSANDRA_SEEDS=cassandra1,cassandra2,cassandra3
+      - CASSANDRA_LISTEN_ADDRESS=cassandra2
+      - CASSANDRA_BROADCAST_ADDRESS=cassandra2
+    restart: always
+
+  cassandra3:
+    image: cassandra:latest
+    container_name: cassandra3
+    volumes:
+      - ./data3:/var/lib/cassandra
+    environment:
+      - MAX_HEAP_SIZE=1G
+      - HEAP_NEWSIZE=256M
+      - CASSANDRA_SEEDS=cassandra1,cassandra2,cassandra3
+      - CASSANDRA_LISTEN_ADDRESS=cassandra3
+      - CASSANDRA_BROADCAST_ADDRESS=cassandra3
+    restart: always

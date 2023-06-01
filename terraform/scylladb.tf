@@ -1,4 +1,4 @@
-resource "aws_security_group" "scylladb_sg" {
+resource "aws_security_group" "db_sg" {
   name        = "scylladb"
   description = "Allow all necessary ports for ScyllaDB"
   vpc_id      = aws_vpc.this.id

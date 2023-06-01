@@ -115,10 +115,11 @@ resource "aws_ecs_task_definition" "load_tests" {
 }
 
 resource "aws_ecs_service" "load_tests" {
-  name            = "load_tests"
-  cluster         = aws_ecs_cluster.this.id
-  task_definition = aws_ecs_task_definition.load_tests.arn
-  desired_count   = 1
+  name                               = "load_tests"
+  cluster                            = aws_ecs_cluster.this.id
+  task_definition                    = aws_ecs_task_definition.load_tests.arn
+  desired_count                      = 1
+  deployment_minimum_healthy_percent = 0
 
   launch_type = "EC2"
 }

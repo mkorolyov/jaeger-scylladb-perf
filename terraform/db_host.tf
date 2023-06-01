@@ -1,7 +1,7 @@
 module "db_host" {
   source = "./ecs_instance"
   deployment_host = "db-host"
-  security_group = aws_security_group.scylladb_sg.id
+  security_group = aws_security_group.db_sg.id
   subnet_id = aws_subnet.this.id
   vpc_id = aws_vpc.this.id
   instance_type = "t2.medium"

@@ -26,7 +26,7 @@ var (
 	tagsCountStr   = os.Getenv("TAGS_COUNT")
 	durationSStr   = os.Getenv("DURATION_S")
 
-	concurrency = mustParseStrToInt(concurrencyStr, 10)
+	concurrency = mustParseStrToInt(concurrencyStr, 50)
 	spansCount  = mustParseStrToInt(spansCountStr, 10)
 	tagsCount   = mustParseStrToInt(tagsCountStr, 10)
 	durationS   = mustParseStrToInt(durationSStr, 60)
@@ -102,35 +102,6 @@ func buildJaegerTracer() opentracing.Tracer {
 	return otTracer
 
 }
-
-//func buildJaegerTracer() (opentracing.Tracer, io.Closer) {
-//	cfg := jaegercfg.Configuration{
-//		ServiceName: "my-service",
-//		Sampler: &jaegercfg.SamplerConfig{
-//			Type:  jaeger.SamplerTypeConst,
-//			Param: 1,
-//		},
-//		Reporter: &jaegercfg.ReporterConfig{
-//			CollectorEndpoint: fmt.Sprintf("http://%s:14269/api/traces", jaegerCollectorHost),
-//			LogSpans:          true,
-//		},
-//	}
-//
-//	sender := transport.NewHTTPTransport(
-//		cfg.Reporter.CollectorEndpoint,
-//		transport.HTTPBatchSize(1),
-//	)
-//
-//	reporter := jaeger.NewRemoteReporter(sender)
-//
-//	tracer, closer, err := cfg.NewTracer(
-//		jaegercfg.Reporter(reporter),
-//	)
-//	if err != nil {
-//		panic(fmt.Sprintf("ERROR: cannot init Jaeger: %v\n", err))
-//	}
-//	return tracer, closer
-//}
 
 func genTags(span opentracing.Span) {
 	for i := 0; i < tagsCount; i++ {
